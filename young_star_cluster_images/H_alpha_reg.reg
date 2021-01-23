@@ -1,0 +1,27 @@
+# Region file format: DS9 version 4.1
+global color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1
+fk5
+# vector(16:13:35.6638,-60:51:44.068,2.000",1.1028755) vector=1 color=red width=2
+# vector(16:13:35.6871,-60:51:47.096,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.6673,-60:51:48.639,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.0466,-60:51:48.332,2.000",179.40103) vector=1 color=red width=2
+# vector(16:13:35.0461,-60:51:48.642,2.000",179.40103) vector=1 color=red width=2
+# vector(16:13:35.0466,-60:51:47.472,2.000",179.40103) vector=1 color=red width=2
+# vector(16:13:35.4612,-60:51:49.889,2.000",180.75204) vector=1 color=red width=2
+# vector(16:13:36.0324,-60:51:50.865,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.9640,-60:51:51.446,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.9321,-60:51:52.325,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.9303,-60:51:52.824,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.5647,-60:51:50.247,2.000",319.48193) vector=1 color=red width=2
+# vector(16:13:36.0641,-60:51:59.921,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:36.6098,-60:52:07.233,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:36.5540,-60:52:08.405,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:36.5773,-60:52:08.948,2.000",359.87718) vector=1 color=red width=2
+# vector(16:13:35.9068,-60:52:09.090,2.000",179.40103) vector=1 color=red width=2
+# vector(16:13:35.6673,-60:51:48.159,2.000",359.87718) vector=1 color=red width=2
+line(16:13:35.8588,-60:51:45.496,16:13:35.8588,-60:51:45.496) # line=0 0 color=white width=2
+line(16:13:35.9147,-60:51:46.670,16:13:35.9147,-60:51:46.670) # line=0 0 color=white width=2
+# segment(16:13:36.3570,-60:51:51.609,16:13:36.1240,-60:51:51.117,16:13:36.0646,-60:51:51.035,16:13:36.0165,-60:51:50.952,16:13:35.9813,-60:51:50.969,16:13:35.9401,-60:51:50.910,16:13:35.8471,-60:51:50.936,16:13:35.7675,-60:51:51.027,16:13:35.5956,-60:51:51.427,16:13:35.3902,-60:51:52.277,16:13:35.3285,-60:51:52.646,16:13:35.2792,-60:51:52.945) color=yellow width=2 dash=1
+line(16:13:35.1023,-60:52:21.418,16:13:33.8564,-60:52:21.386) # line=0 0 color=white width=3
+# text(16:13:34.4875,-60:52:20.280) color=white font="helvetica 20 normal roman" text={3 kpc}
+point(16:13:35.7186,-60:51:54.491) # point=cross 25 color=red width=2 fixed=1

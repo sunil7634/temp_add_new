@@ -1,0 +1,244 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''Checks Simple Measurements of Photometry against SExtractor's results
+'''
+
+# Python Imports
+import warnings
+import pickle
+from os import path
+from itertools import count
+
+# 3rd Party Imports
+import numpy as  np
+from astropy import wcs
+from astropy.io import fits
+import matplotlib as mpl
+from matplotlib import pyplot as plt
+from astroptical.photometry import simpleapphot as phot
+from astroptical.sextractor import readcatalog  as readcat
+from astroptical.photometry import magnitude as mag
+
+# Setup MPL
+mpl.rc('font', size=14)
+
+
+# --- File Setup --------------------------------------------------------------
+
+# Get File Names of SExtractor Catalogs
+catPath  = '/home/wwaldron/DoctoralResearch/Images/ESO_137-001/MAST_DATA/' \
+           'WaldronPipeline/SExtractor/Catalogs'
+
+# Get Hubble Files
+fPath   = '/home/wwaldron/DoctoralResearch/Images/ESO_137-001/MAST_DATA/' \
+             'WaldronPipeline/OriginalFiles/Drizzled'
+hubNames = {275: path.join(fPath, 'ib9ga1010_drc.fits'),
+            475: path.join(fPath, 'jb9g01020_drc.fits'),
+            814: path.join(fPath, 'jb9g01010_drc.fits'),
+            160: path.join(fPath, 'iblwa1010_drz.fits')}
+
+# Get Waldron FITS Files
+fPath   = '/home/wwaldron/DoctoralResearch/Images/ESO_137-001/MAST_DATA/' \
+             'WaldronPipeline'
+walNames = {275: path.join(fPath, 'CleanedImages/F275W_drc_cleaned.fits'),
+            475: path.join(fPath, 'CleanedImages/F475W_drc_chip_cleaned.fits'),
+            814: path.join(fPath, 'CleanedImages/F814W_drc_chip_cleaned.fits'),
+            160: path.join(fPath, 'DrizzledImages/F160W_drz.fits')}
+
+# Setup
+# magnitude(flux, zeroPoint, galExt=0, apCor=0, kcor=0, distToSrc=10)
+with open('ESO_Zero_Pt_Table.p','rb') as f:
+    zpts = pickle.load(f)
+
+
+# --- Test Regions ------------------------------------------------------------
+# Initialize Coordinates
+coords = {key: {'RA': np.empty(5), 'DEC': np.empty(5)} for key in walNames}
+
+# Store Coordinates
+coords[275]['RA'][:]  = [243.36562, 243.38181, 243.31318, 243.33443, 243.34670]
+coords[275]['DEC'][:] = [-60.75837, -60.75639, -60.76271, -60.77188, -60.77555]
+coords[475]['RA'][:]  = [243.33397, 243.32939, 243.32253, 243.38142, 243.37243]
+coords[475]['DEC'][:] = [-60.76963, -60.75568, -60.75428, -60.74065, -60.74753]
+coords[814]['RA'][:]  = [243.37445, 243.34522, 243.33896, 243.30888, 243.31200]
+coords[814]['DEC'][:] = [-60.73939, -60.73118, -60.73226, -60.73615, -60.77561]
+coords[160]['RA'][:]  = [243.32691, 243.34854, 243.37461, 243.38274, 243.34522]
+coords[160]['DEC'][:] = [-60.76897, -60.77397, -60.77307, -60.75819, -60.74372]
+
+
+# --- WCS ---------------------------------------------------------------------
+walWCS, hubWCS = {}, {}
+for walKey, hubKey in zip(walNames, hubNames):
+    with fits.open(walNames[walKey]) as fid:
+        walWCS[walKey] = wcs.WCS(fid[1].header)
+    with fits.open(hubNames[hubKey]) as fid:
+        hubWCS[hubKey] = wcs.WCS(fid[1].header)
+
+# --- Get Fluxes --------------------------------------------------------------
+
+# Setup Results
+res = {key: {} for key in walNames}
+
+# Hubble Flux
+r    = {275: 0.55, 475: 0.5, 814: 0.5, 160: 0.8}
+rOut = {275: 0.95, 475: 0.9, 814: 0.9, 160: 1.2}
+for key in hubNames:
+    imgCrd = hubWCS[key].wcs_world2pix(np.vstack((coords[key]['RA'],
+                                                  coords[key]['DEC'])).T, 0)
+    pixScl = 3600 * wcs.utils.proj_plane_pixel_scales(hubWCS[key])[0]
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        res[key]['HubApFlux'] = phot(hubNames[key], imgCrd, r[key]/pixScl,
+                                     r[key]/pixScl, rOut[key]/pixScl)
+
+    # SExtractor Results
+    cat = readcat(path.join(catPath, 'ESO_Orig_F{}W.cat'.format(key)))
+
+    # Loop XY. Could vectorize, but can't think right now
+    res[key]['HubSeFlux'] = np.empty(coords[key]['RA'].shape)
+    for i, (x, y) in enumerate(imgCrd):
+        srcDist = np.sqrt((cat['X_IMAGE'] - x)**2 + (cat['Y_IMAGE'] - y)**2)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            minInd = np.argmin(srcDist)
+            minDst = srcDist[minInd]
+            res[key]['HubSeFlux'][i] = cat['FLUX_APER'][minInd] if minDst*pixScl < 0.25 else np.NaN
+
+    # Get Magnitudes
+    res[key]['HubSeMag'] = mag(res[key]['HubSeFlux'], zpts['abZpt'][key],
+                               zpts['GalExt'][key], zpts['ApCor'][key],
+                               zpts['kcor'][key])
+
+# Waldron Fluxes
+pixScl = 3600 * wcs.utils.proj_plane_pixel_scales(walWCS[475])[0]
+for key in walNames:
+    imgCrd = walWCS[475].wcs_world2pix(np.vstack((coords[key]['RA'],
+                                                  coords[key]['DEC'])).T, 0)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        res[key]['WalApFlux'] = phot(walNames[key], imgCrd, r[key]/pixScl,
+                                     r[key]/pixScl, rOut[key]/pixScl)
+
+
+# --- Get SExtractor Results --------------------------------------------------
+
+# Waldron
+for key in walNames:
+    cat = readcat(path.join(catPath, 'ESO_F{0}WxF{0}W.cat'.format(key)))
+    imgCrd = walWCS[475].wcs_world2pix(np.vstack((coords[key]['RA'],
+                                                  coords[key]['DEC'])).T, 0)
+
+    # Loop XY. Could vectorize, but can't think right now
+    res[key]['WalSeFlux'] = np.empty(coords[key]['RA'].shape)
+    for i, (x, y) in enumerate(imgCrd):
+        srcDist = np.sqrt((cat['X_IMAGE'] - x)**2 + (cat['Y_IMAGE'] - y)**2)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            minInd = np.argmin(srcDist)
+            minDst = srcDist[minInd]
+            res[key]['WalSeFlux'][i] = cat['FLUX_APER'][minInd] if minDst*pixScl < 0.25 else np.NaN
+
+    # Get Magnitudes
+    res[key]['WalSeMag'] = mag(res[key]['WalSeFlux'], zpts['abZpt'][key],
+                               zpts['GalExt'][key], zpts['ApCor'][key],
+                               zpts['kcor'][key])
+
+
+# --- Plot Results ------------------------------------------------------------
+
+# Markers
+mkrs = {275: '.', 475: 'x', 814: '2', 160: '+'}
+
+# Setup
+fig = plt.figure(figsize=(8, 8))
+ax  = plt.axes()
+
+# Plot Results
+minComp, maxComp = 1e0, 1e2
+ax.plot([0, maxComp], [0, maxComp], 'k', zorder=1)
+for key in res:
+
+    # Plot Results
+    filt = 'F{:d}W'.format(key)
+    ax.scatter([-100], [-100], marker=mkrs[key], color='k', label=filt)
+    ax.scatter(res[key]['HubApFlux'], res[key]['WalApFlux'], marker=mkrs[key],
+               color=plt.get_cmap('tab10')(0), s=64, zorder=2)
+    ax.scatter(res[key]['HubSeFlux'], res[key]['WalSeFlux'],
+               marker=mkrs[key], color=plt.get_cmap('tab10')(0.1), s=64,
+               zorder=2)
+
+# Extra Labels
+ax.scatter([-100], [-100], marker='^', color=plt.get_cmap('tab10')(0),
+           label='Aperture')
+ax.scatter([-100], [-100], marker='^', color=plt.get_cmap('tab10')(1),
+           label='SExtractor')
+
+# Niceties
+ax.set_xlim(minComp, maxComp)
+ax.set_ylim(minComp, maxComp)
+ax.set_xscale('log')
+ax.set_yscale('log')
+ax.set_xlabel('Hubble Image Flux (e/s)')
+ax.set_ylabel('Waldron Image Flux (e/s)')
+ax.set_title( 'ESO 137-001 Flux Comparisons')
+ax.grid(True)
+ax.set_axisbelow(True)
+ax.legend()
+plt.tight_layout()
+
+plt.show()
+
+
+# --- Write Region Files ------------------------------------------------------
+thresh  = 0.15
+cir = 'circle({:f}, {:f}, {:.2f}")\n'
+ann = 'annulus({:f}, {:f}, {:.2f}", {:.2f}") # background\n'
+blCir, blAnn = cir[:-1] + ' # color=cyan\n',    ann[:-1] + ' color=cyan\n'
+mgCir, mgAnn = cir[:-1] + ' # color=magenta\n', ann[:-1] + ' color=magenta\n'
+for key in res:
+
+    n = coords[key]['RA'].size
+    diff = (res[key]['WalSeFlux'] - res[key]['HubApFlux'])/res[key]['HubApFlux']
+    hghInds = np.flatnonzero(np.abs(diff) > 0.15)
+
+    # Write out high differences
+    regFile = path.join(fPath, 'DS9',
+                        'SextractorCheckRegions-F{:d}W.reg'.format(key))
+    with open(regFile, 'w') as fid:
+
+        # Write Header
+        fid.write('# Region file format: DS9 version 4.1\n')
+        fid.write('global color=green\n')
+        fid.write('fk5\n')
+
+        # Loop through brightest sources (50%)
+        for ii, x, y in zip(count(), coords[key]['RA'], coords[key]['DEC']):
+
+            # Write Good Srcs in Green and Bad in Blue
+            if np.isnan(res[key]['WalSeFlux'][ii]):
+                fid.write(mgCir.format(x, y, r[key]))
+                fid.write(mgAnn.format(x, y, r[key], rOut[key]))
+            elif ii in hghInds:
+                fid.write(blCir.format(x, y, r[key]))
+                fid.write(blAnn.format(x, y, r[key], rOut[key]))
+            else:
+                fid.write(cir.format(x, y, r[key]))
+                fid.write(ann.format(x, y, r[key], rOut[key]))
+
+
+# --- Get Ratios --------------------------------------------------------------
+
+ratios = {}
+for key in res:
+
+    # Get Ratios
+    ratios[key] = {
+        'WAdWS': np.mean(res[key]['WalApFlux']/res[key]['WalSeFlux']),
+        'WAdHA': np.mean(res[key]['WalApFlux']/res[key]['HubApFlux']),
+        'WAdHS': np.mean(res[key]['WalApFlux']/res[key]['HubSeFlux']),
+        'WSdHA': np.mean(res[key]['WalSeFlux']/res[key]['HubApFlux']),
+        'WSdHS': np.mean(res[key]['WalSeFlux']/res[key]['HubSeFlux']),
+        'HAdHS': np.mean(res[key]['HubApFlux']/res[key]['HubSeFlux'])
+    }
+
+    print(key, ratios[key])

@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Futures
+from __future__ import division, with_statement
+
+# Others
+import matplotlib        as mpl
+import matplotlib.pyplot as plt
+from astroptical import photometry as phot
+import pyregion
+import pickle
+import numpy   as np
+
+# Get the Regions first
+ds9File = '/home/wwaldron/DoctoralResearch/Images/ESO_137-001/MAST_DATA/' \
+          'WaldronPipeline/DS9/colortest.reg'
+regs = pyregion.open(ds9File)
+pos = []
+for reg in regs:
+    pos.append(reg.coord_list[:2])
+pos = np.array(pos)
+
+# Get the Fluxes
+flux = {}
+r, rIn, rOut = 1.5, 1.5, 2
+hstPath = '/home/wwaldron/DoctoralResearch/Images/ESO_137-001/MAST_DATA/' \
+          'WaldronPipeline/'
+flux[275] = phot.simpleapphot(hstPath +
+            'CleanedImages/F275W_drc_cleaned.fits',     pos,r,rIn,rOut,'fk5')
+flux[475] = phot.simpleapphot(hstPath +
+            'CleanedImages/F475W_drc_chip_cleaned.fits',pos,r,rIn,rOut,'fk5')
+flux[814] = phot.simpleapphot(hstPath +
+            'CleanedImages/F814W_drc_chip_cleaned.fits',pos,r,rIn,rOut,'fk5')
+flux[160] = phot.simpleapphot(hstPath +
+            'DrizzledImages/F160W_drz.fits',            pos,r,rIn,rOut,'fk5')
+
+# Import ESO DF
+with open('ESO_Zero_Pt_Table.p','rb') as f:
+    esoZpt = pickle.load(f)
+
+# Get Magnitudes
+mags = {}
+for key in flux:
+    mags[key], _ = phot.magnitude(flux[key], esoZpt['abZpt'][key],
+                   esoZpt['GalExt'][key], esoZpt['ApCor'][key],
+                   esoZpt['kcor'][key])
+
+# Plot Setup
+savePath = '/home/wwaldron/DoctoralResearch/Data/ESO_137-001/' \
+           'PlotsAndFigures/ColorMagDiagrams/ColorTests/'
+gold     = (1 + np.sqrt(5))/2
+font = {'size'   : 14}
+mpl.rc('font', **font)
+figSize  = (10,10/gold)
+plt.figure(figsize=figSize); ax = plt.axes()
+
+# Scatter
+x = mags[275] - mags[475]
+y = mags[475] - mags[814]
+plt.scatter(x,y)
+plt.show()

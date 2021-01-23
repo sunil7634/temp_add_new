@@ -1,0 +1,23 @@
+mkdir -p: to crate recursive empty dirs
+ls -R: to list all recursive files
+cp -r: to copy the directoris and all its content
+sort -n: to sort numerically
+ cut -d , -f 2 animals.txt 
+ cut -d, -f2 animalst.txt #both yield same
+ cut -d, -f 2 animals.txt | sort | uniq -c #-c will show the 
+ duplicate no.
+ q1-done. for species in cubane ethane; do for temp in 24 35; do echo "mkdir $species _$temp" ; done; done
+ why I cannot insert _ inbetween yes just use \_ to ignore special 
+ bash filename.sh (no need to change chmod u+x)
+ q2. while writing a shell script sometimes we begin a for loop and sometimes
+ we start like head -n $2 $1
+ q3. ask why longest_correct.sh works but not the longest.sh
+ wc -l $(find . -name "*.txt")# first does the command inside the 
+ $ then counts the line 
+ ##python tutorial
+ print(numpy.mean(data, axis=0))
+  print(numpy.mean(data, axis=1))
+  numpy.diff(data, axis=1)
+  # learn to open file in numpy and python 
+  ###### GIT
+  
